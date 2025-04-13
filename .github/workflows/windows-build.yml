@@ -1,0 +1,48 @@
+name: Windows Release Build
+
+on:
+  push:
+    branches:
+      - '**'      # All branches
+    tags:
+      - '*'  # Match any tag (e.g., v1.0.0, release-2025, etc.)
+
+jobs:
+  build:
+    name: Build and Release for Windows
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y mingw-w64 meson ninja-build clang clang-tidy clang-format
+
+    - name: Configure Meson for MinGW-w64
+      run: |
+        meson setup builddir \
+          --cross-file cross.txt \
+          --buildtype=release
+    - name: Run clang-tidy check
+      run: ninja -C builddir clang-tidy
+
+    - name: Build project
+      run: ninja -C builddir
+
+    - name: Copy artifacts
+      run: |
+        mkdir dist
+        cp builddir/rivals_sig_patcher.exe dist/
+        cp builddir/librivals_sig_patcher.dll dist/
+
+    - name: Upload release to GitHub
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          dist/rivals_sig_patcher.exe
+          dist/rivals_sig_patcher.dll
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
