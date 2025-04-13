@@ -7,7 +7,7 @@
 int __internal_patch()
 {
     const DWORD baseOffset = 0xD9D5FF;
-    BYTE patchBytes[] = {0xc7, 0x03, 0x0c};
+    BYTE patchBytes[] = {0xc7, 0x03, 0x0};
 
     Instruction newInstruction = {patchBytes, sizeof(patchBytes)};
 
