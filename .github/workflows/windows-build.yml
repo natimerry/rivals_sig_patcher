@@ -42,6 +42,6 @@ jobs:
       with:
         files: |
           dist/rivals_sig_patcher.exe
-          dist/rivals_sig_patcher.dll
+          dist/librivals_sig_patcher.dll
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
