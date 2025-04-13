@@ -1,3 +1,6 @@
 #pragma once
 #define PATCHER_VERSION "@version@"
 
+#ifdef TEST_BUILD
+printf("Running test build...\n");
+#endif

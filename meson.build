@@ -14,12 +14,21 @@ cfg_data.set('version', meson.project_version())
 
 conf = configure_file(input: 'include/config.h.in', output: 'config.h', configuration: cfg_data)
 
+is_release = get_option('buildtype') == 'release'
+
+c_args = []
+
+if not is_release
+    c_args += ['-DTEST_BUILD']
+endif
+
 executable(
     'rivals_sig_patcher',
     sources,
     conf,
     include_directories: includes,
-    win_subsystem: 'console'
+    win_subsystem: 'console',
+    c_args: c_args
 )
 
 
@@ -28,5 +37,5 @@ shared_library(
     sources,
     conf,
     include_directories: includes,
-    c_args: '-DPATCHER_DLL' # Define PATCHER_DLL when compiling as DLL
+    c_args: c_args + ['-DPATCHER_DLL']
 )

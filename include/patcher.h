@@ -18,6 +18,8 @@ typedef struct
     SIZE_T size;
 } Instruction;
 
+BOOL EnableDebugPrivilege();
+
 BOOL ReplaceInstructionInProcess(DWORD processId, DWORD baseOffset, const Instruction* newInstruction);
 
 #endif

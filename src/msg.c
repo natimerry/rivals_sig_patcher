@@ -31,9 +31,9 @@ DEF_MSG_FN(msg_err_a, char, _vsnprintf, MessageBoxA, TITLE_A, MB_OK | MB_ICONERR
 DEF_MSG_FN(msg_err_w, wchar_t, _vsnwprintf, MessageBoxW, TITLE_W, MB_OK | MB_ICONERROR, exit(1))
 
 // Warn
-DEF_MSG_FN(msg_warn_a, char, _vsnprintf, MessageBoxA, TITLE_A, MB_OK | MB_ICONEXCLAMATION, )
-DEF_MSG_FN(msg_warn_w, wchar_t, _vsnwprintf, MessageBoxW, TITLE_W, MB_OK | MB_ICONEXCLAMATION, )
+DEF_MSG_FN(msg_warn_a, char, _vsnprintf, MessageBoxA, TITLE_A, MB_OK | MB_ICONEXCLAMATION, return)
+DEF_MSG_FN(msg_warn_w, wchar_t, _vsnwprintf, MessageBoxW, TITLE_W, MB_OK | MB_ICONEXCLAMATION, return)
 
 // Info
-DEF_MSG_FN(msg_info_a, char, _vsnprintf, MessageBoxA, TITLE_A, MB_OK | MB_ICONINFORMATION, )
-DEF_MSG_FN(msg_info_w, wchar_t, _vsnwprintf, MessageBoxW, TITLE_W, MB_OK | MB_ICONINFORMATION, )
+DEF_MSG_FN(msg_info_a, char, _vsnprintf, MessageBoxA, TITLE_A, MB_OK | MB_ICONINFORMATION, return)
+DEF_MSG_FN(msg_info_w, wchar_t, _vsnwprintf, MessageBoxW, TITLE_W, MB_OK | MB_ICONINFORMATION, return)

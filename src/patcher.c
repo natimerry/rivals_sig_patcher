@@ -5,6 +5,7 @@
 #include <psapi.h> // For GetModuleInformation
 #include <stdio.h>
 #include <game.h>
+#include <stdbool.h>
 void PrintLastError(const char* msg)
 {
     DWORD err = GetLastError();
@@ -13,6 +14,51 @@ void PrintLastError(const char* msg)
                    err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&errMsg, 0, NULL);
     printf("%s (Error %lu): %s", msg, err, errMsg);
     LocalFree(errMsg);
+}
+
+BOOL EnableDebugPrivilege()
+{
+    HANDLE hToken = NULL;
+    LUID luid = {};
+    TOKEN_PRIVILEGES tp = {};
+
+    // Open the current process token
+    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &hToken))
+    {
+        wprintf(L"OpenProcessToken failed. Error: %lu\n", GetLastError());
+        return FALSE;
+    }
+
+    // Lookup the LUID for SeDebugPrivilege
+    if (!LookupPrivilegeValue(NULL, SE_DEBUG_NAME, &luid))
+    {
+        wprintf(L"LookupPrivilegeValue failed. Error: %lu\n", GetLastError());
+        CloseHandle(hToken);
+        return FALSE;
+    }
+
+    // Set up the TOKEN_PRIVILEGES structure
+    tp.PrivilegeCount = 1;
+    tp.Privileges[0].Luid = luid;
+    tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+
+    if (!AdjustTokenPrivileges(hToken, FALSE, &tp, sizeof(tp), NULL, NULL))
+    {
+        wprintf(L"AdjustTokenPrivileges failed. Error: %lu\n", GetLastError());
+        CloseHandle(hToken);
+        return FALSE;
+    }
+
+    if (GetLastError() == ERROR_NOT_ALL_ASSIGNED)
+    {
+        wprintf(L"SeDebugPrivilege not assigned. You may lack permissions.\n");
+        CloseHandle(hToken);
+        return FALSE;
+    }
+
+    CloseHandle(hToken);
+    wprintf(L"Debug privelages acquired");
+    return TRUE;
 }
 
 BOOL ReplaceInstructionInProcess(DWORD processId, DWORD baseOffset, const Instruction* newInstruction)
@@ -27,6 +73,7 @@ BOOL ReplaceInstructionInProcess(DWORD processId, DWORD baseOffset, const Instru
     HMODULE moduleBaseAddress = GetModuleBaseAddress(processId);
     if (moduleBaseAddress == NULL)
     {
+        PrintLastError("GetModuleBaseAddress failed");
         CloseHandle(hProcess);
         return FALSE;
     }
