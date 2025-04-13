@@ -1,0 +1,1 @@
+meson setup --cross-file cross.txt $* build
