@@ -1,4 +1,4 @@
-project('rivals_sig_patcher','c',version: '0.1.1')
+project('rivals_sig_patcher','c',version: '0.2.1')
 
 sources = [
     'src/game.c',

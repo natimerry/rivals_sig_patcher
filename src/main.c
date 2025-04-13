@@ -66,7 +66,7 @@ int __internal_patch()
 
 #ifndef TEST_BUILD
     const DWORD baseOffset = 0xD9D5FF;
-    BYTE patchBytes[] = {0xc7, 0x03, 0x0};
+    BYTE patchBytes[] = {0xc7, 0x03, 0x0, 0x0, 0x0, 0x0};
 #else
     const DWORD baseOffset = 0x16d8;
     BYTE patchBytes[] = {0x74, 0x26};
