@@ -2,10 +2,8 @@ name: Windows Release Build
 
 on:
   push:
-    branches:
-      - '**'      # All branches
     tags:
-      - '*'  # Match any tag (e.g., v1.0.0, release-2025, etc.)
+      - '*'  # Trigger on any tag push (e.g., v1.0.0, release-2025, etc.)
 
 jobs:
   build:
@@ -26,6 +24,7 @@ jobs:
         meson setup builddir \
           --cross-file cross.txt \
           --buildtype=release
+
     - name: Run clang-tidy check
       run: ninja -C builddir clang-tidy
 
