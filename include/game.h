@@ -5,6 +5,8 @@
 
 DWORD get_game_handle();
 
+HMODULE GetImageBaseNtQuery(HANDLE hProcess);
+
 HMODULE GetModuleBaseAddress(DWORD processId);
 
 #endif

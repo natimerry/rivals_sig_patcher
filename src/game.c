@@ -56,86 +56,44 @@ DWORD get_game_handle()
     return processId;
 }
 
-// Get base address of a module in a target process
-HMODULE GetModuleBaseAddress(DWORD processId)
+#include <winternl.h>
+
+typedef NTSTATUS(WINAPI* pNtQueryInformationProcess)(HANDLE, PROCESSINFOCLASS, PVOID, ULONG, PULONG);
+
+HMODULE GetImageBaseNtQuery(HANDLE hProcess)
 {
     HMODULE hMod = NULL;
-    HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, processId);
-    if (hSnapshot != INVALID_HANDLE_VALUE)
-    {
-        MODULEENTRY32W modEntry;
-        modEntry.dwSize = sizeof(modEntry);
 
-        if (Module32FirstW(hSnapshot, &modEntry))
-        {
-            do
-            {
-                wprintf(L"Checking module: %s\n", modEntry.szModule);
-                if (_wcsicmp(modEntry.szModule, proc_name) == 0)
-                {
-                    hMod = modEntry.hModule;
-                    break;
-                }
-            } while (Module32NextW(hSnapshot, &modEntry));
-        }
+    HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
+    if (!ntdll)
+        return NULL;
 
-        CloseHandle(hSnapshot);
-    }
+    pNtQueryInformationProcess NtQueryInformationProcess =
+        (pNtQueryInformationProcess)GetProcAddress(ntdll, "NtQueryInformationProcess");
 
-    // If failed to get module base via snapshot (likely due to suspended process), fall back
-    if (!hMod)
-    {
-        HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, processId);
-        HANDLE hThread = NULL;
+    if (!NtQueryInformationProcess)
+        return NULL;
 
-        // Grab main thread
-        THREADENTRY32 te32 = {.dwSize = sizeof(THREADENTRY32)};
-        HANDLE hThreadSnap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
+    PROCESS_BASIC_INFORMATION pbi = {0};
+    if (NtQueryInformationProcess(hProcess, ProcessBasicInformation, &pbi, sizeof(pbi), NULL) != 0)
+        return NULL;
 
-        if (hThreadSnap != INVALID_HANDLE_VALUE)
-        {
-            if (Thread32First(hThreadSnap, &te32))
-            {
-                do
-                {
-                    if (te32.th32OwnerProcessID == processId)
-                    {
-                        hThread = OpenThread(THREAD_ALL_ACCESS, FALSE, te32.th32ThreadID);
-                        break;
-                    }
-                } while (Thread32Next(hThreadSnap, &te32));
-            }
-            CloseHandle(hThreadSnap);
-        }
-
-        if (hProcess && hThread)
-        {
-            CONTEXT ctx = {0};
-            ctx.ContextFlags = CONTEXT_FULL;
-
-            if (GetThreadContext(hThread, &ctx))
-            {
 #ifdef _WIN64
-                DWORD64 pebAddress = ctx.Rdx;
-                DWORD64 imageBase = 0;
-                ReadProcessMemory(hProcess, (LPCVOID)(pebAddress + 0x10), &imageBase, sizeof(imageBase), NULL);
-                hMod = (HMODULE)imageBase;
+    PVOID pebBase = pbi.PebBaseAddress;
+    PVOID imageBase = 0;
+    SIZE_T read = 0;
+    if (ReadProcessMemory(hProcess, (BYTE*)pebBase + 0x10, &imageBase, sizeof(imageBase), &read) &&
+        read == sizeof(imageBase))
+        hMod = (HMODULE)imageBase;
 #else
-                DWORD pebAddress = ctx.Ebx;
-                DWORD imageBase = 0;
-                ReadProcessMemory(hProcess, (LPCVOID)(pebAddress + 0x08), &imageBase, sizeof(imageBase), NULL);
-                hMod = (HMODULE)imageBase;
+    // For 32-bit, offset is different
+    PVOID pebBase = pbi.PebBaseAddress;
+    PVOID imageBase = 0;
+    SIZE_T read = 0;
+    if (ReadProcessMemory(hProcess, (BYTE*)pebBase + 0x08, &imageBase, sizeof(imageBase), &read) &&
+        read == sizeof(imageBase))
+        hMod = (HMODULE)imageBase;
 #endif
-            }
-
-            CloseHandle(hThread);
-        }
-
-        if (hProcess)
-        {
-            CloseHandle(hProcess);
-        }
-    }
 
     return hMod;
 }
