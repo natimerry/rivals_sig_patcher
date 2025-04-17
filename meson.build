@@ -1,4 +1,4 @@
-project('rivals_sig_patcher','c',version: '0.2.1')
+project('rivals_sig_patcher', 'c', version: '0.3.0')
 
 sources = [
     'src/game.c',
@@ -28,14 +28,13 @@ executable(
     conf,
     include_directories: includes,
     win_subsystem: 'console',
-    c_args: c_args
+    c_args: c_args,
 )
-
 
 shared_library(
     'rivals_sig_patcher',
     sources,
     conf,
     include_directories: includes,
-    c_args: c_args + ['-DPATCHER_DLL']
+    c_args: c_args + ['-DPATCHER_DLL'],
 )
