@@ -57,7 +57,7 @@ BOOL EnableDebugPrivilege()
     }
 
     CloseHandle(hToken);
-    wprintf(L"Debug privelages acquired");
+    wprintf(L"Debug privelages acquired\n");
     return TRUE;
 }
 
@@ -72,10 +72,12 @@ BOOL ReplaceInstructionInProcess(DWORD processId, DWORD baseOffset, const Instru
 
     HMODULE moduleBaseAddress = NULL;
     if (hProcess)
+    {
         moduleBaseAddress = GetImageBaseNtQuery(hProcess);
+    }
     if (moduleBaseAddress == NULL)
     {
-        PrintLastError("GetModuleBaseAddress failed");
+        PrintLastError("GetImageBaseNtQuery failed");
         CloseHandle(hProcess);
         return FALSE;
     }
@@ -83,13 +85,23 @@ BOOL ReplaceInstructionInProcess(DWORD processId, DWORD baseOffset, const Instru
     LPVOID targetAddress = (LPVOID)((uintptr_t)moduleBaseAddress + baseOffset);
     SIZE_T bytesToWrite = newInstruction->size;
     SIZE_T bytesWritten = 0;
-    DWORD oldProtect;
+    DWORD oldProtect = 0;
 
     MEMORY_BASIC_INFORMATION mbi = {0};
+
+    // Change memory protection to allow writing
+    if (!VirtualProtectEx(hProcess, targetAddress, bytesToWrite, PAGE_EXECUTE_READWRITE, &oldProtect))
+    {
+        PrintLastError("VirtualProtectEx failed");
+        CloseHandle(hProcess);
+        return FALSE;
+    }
+
+    // Read updated memory addresses
     if (VirtualQueryEx(hProcess, targetAddress, &mbi, sizeof(mbi)))
     {
         printf("BaseAddress: 0x%p\n", mbi.BaseAddress);
-        printf("RegionSize:  0x%lx\n", (DWORD_PTR)mbi.RegionSize);
+        printf("RegionSize:  0x%llx\n", (DWORD_PTR)mbi.RegionSize);
         printf("State:       0x%lx\n", mbi.State);
         printf("Protect:     0x%lx\n", mbi.Protect);
         printf("Type:        0x%lx\n", mbi.Type);
@@ -97,13 +109,6 @@ BOOL ReplaceInstructionInProcess(DWORD processId, DWORD baseOffset, const Instru
     else
     {
         PrintLastError("VirtualQueryEx failed");
-    }
-    // Change memory protection to allow writing
-    if (!VirtualProtectEx(hProcess, targetAddress, bytesToWrite, PAGE_EXECUTE_READWRITE, &oldProtect))
-    {
-        PrintLastError("VirtualProtectEx failed");
-        CloseHandle(hProcess);
-        return FALSE;
     }
 
     HMODULE hNtdll = GetModuleHandleA("ntdll.dll");
@@ -133,14 +138,13 @@ BOOL ReplaceInstructionInProcess(DWORD processId, DWORD baseOffset, const Instru
 
     if (status != 0)
     {
-        fprintf(stderr, "NtWriteVirtualMemory failed: 0x%X\n", status);
+        fprintf(stderr, "NtWriteVirtualMemory failed: 0x%lX\n", status);
         CloseHandle(hProcess);
         return FALSE;
     }
 
-    bytesWritten = ntBytesWritten; // optional if you're tracking it later
+    bytesWritten = ntBytesWritten; 
 
-    // Restore the original memory protection
     if (!VirtualProtectEx(hProcess, targetAddress, bytesToWrite, oldProtect, &oldProtect))
     {
         PrintLastError("VirtualProtectEx (restore) failed");
@@ -151,8 +155,8 @@ BOOL ReplaceInstructionInProcess(DWORD processId, DWORD baseOffset, const Instru
         PrintLastError("FlushInstructionCache failed");
     }
 
-    printf("Successfully replaced %zu bytes at address %p (module base + 0x%lX) in process %lu.\n", bytesWritten,
-           targetAddress, baseOffset, processId);
+    msg_info_a("Successfully replaced %zu bytes at address %p (module base + 0x%lX) in process %lu.\n", bytesWritten,
+               targetAddress, baseOffset, processId);
 
     CloseHandle(hProcess);
     return TRUE;

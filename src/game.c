@@ -60,23 +60,34 @@ DWORD get_game_handle()
 
 typedef NTSTATUS(WINAPI* pNtQueryInformationProcess)(HANDLE, PROCESSINFOCLASS, PVOID, ULONG, PULONG);
 
+typedef NTSTATUS(NTAPI* NtReadVirtualMemory_t)(HANDLE ProcessHandle, PVOID BaseAddress, PVOID Buffer,
+                                               ULONG NumberOfBytesToRead, PULONG NumberOfBytesReaded);
 HMODULE GetImageBaseNtQuery(HANDLE hProcess)
 {
     HMODULE hMod = NULL;
 
     HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
     if (!ntdll)
+    {
+        msg_err_a("Unable to get module handle to ntdll");
         return NULL;
+    }
 
     pNtQueryInformationProcess NtQueryInformationProcess =
         (pNtQueryInformationProcess)GetProcAddress(ntdll, "NtQueryInformationProcess");
 
     if (!NtQueryInformationProcess)
+    {
+        msg_err_a("Unable to get proc address to NtQueryInformationProcess");
         return NULL;
+    }
 
     PROCESS_BASIC_INFORMATION pbi = {0};
     if (NtQueryInformationProcess(hProcess, ProcessBasicInformation, &pbi, sizeof(pbi), NULL) != 0)
+    {
+        msg_err_a("Unable query game hProcess");
         return NULL;
+    }
 
 #ifdef _WIN64
     PVOID pebBase = pbi.PebBaseAddress;
@@ -84,16 +95,30 @@ HMODULE GetImageBaseNtQuery(HANDLE hProcess)
     SIZE_T read = 0;
     if (ReadProcessMemory(hProcess, (BYTE*)pebBase + 0x10, &imageBase, sizeof(imageBase), &read) &&
         read == sizeof(imageBase))
+    {
         hMod = (HMODULE)imageBase;
+    }
 #else
     // For 32-bit, offset is different
     PVOID pebBase = pbi.PebBaseAddress;
     PVOID imageBase = 0;
     SIZE_T read = 0;
-    if (ReadProcessMemory(hProcess, (BYTE*)pebBase + 0x08, &imageBase, sizeof(imageBase), &read) &&
-        read == sizeof(imageBase))
+    ULONG bytesRead;
+    PVOID imageBase = NULL;
+
+    if (NtReadVirtualMemory &&
+        NtReadVirtualMemory(hProcess, (PBYTE)pebBase + 0x08, &imageBase, sizeof(imageBase), &bytesRead) == 0 &&
+        bytesRead == sizeof(imageBase))
+    {
         hMod = (HMODULE)imageBase;
+    }
 #endif
+
+    if (hMod == NULL)
+    {
+        msg_err_a("Failed to read PEB section");
+        return NULL;
+    }
 
     return hMod;
 }

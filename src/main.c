@@ -13,8 +13,9 @@ DWORD FindProcessId(const char* processName)
     PROCESSENTRY32 pe32;
     HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (snapshot == INVALID_HANDLE_VALUE)
+    {
         return 0;
-
+    }
     pe32.dwSize = sizeof(PROCESSENTRY32);
     if (!Process32First(snapshot, &pe32))
     {
@@ -40,7 +41,9 @@ void SuspendAllThreads(DWORD pid)
     THREADENTRY32 te32 = {.dwSize = sizeof(THREADENTRY32)};
     HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
     if (snapshot == INVALID_HANDLE_VALUE)
+    {
         return;
+    }
 
     if (Thread32First(snapshot, &te32))
     {
@@ -66,7 +69,9 @@ void ResumeAllThreads(DWORD pid)
     THREADENTRY32 te32 = {.dwSize = sizeof(THREADENTRY32)};
     HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
     if (snapshot == INVALID_HANDLE_VALUE)
+    {
         return;
+    }
 
     if (Thread32First(snapshot, &te32))
     {
@@ -78,7 +83,9 @@ void ResumeAllThreads(DWORD pid)
                 if (hThread)
                 {
                     while (ResumeThread(hThread) > 0)
-                        ;
+                    {
+                    }
+
                     CloseHandle(hThread);
                 }
             }

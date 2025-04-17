@@ -80,7 +80,9 @@ void GetDirectoryFromPath(const char* fullPath, char* outDir)
 {
     const char* lastSlash = strrchr(fullPath, '\\');
     if (!lastSlash)
+    {
         lastSlash = strrchr(fullPath, '/');
+    }
 
     if (lastSlash)
     {
@@ -97,7 +99,8 @@ void GetDirectoryFromPath(const char* fullPath, char* outDir)
 
 int main()
 {
-    char exePath[MAX_PATH], dllPath[MAX_PATH];
+    char exePath[MAX_PATH];
+    char dllPath[MAX_PATH];
     if (!ReadConfig(exePath, dllPath))
     {
         printf("Failed to read config\n");
